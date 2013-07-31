@@ -4,6 +4,12 @@ A more useful wrapper around [CFTree](https://developer.apple.com/documentation/
 
 Born out of a desire to not work with CFTree objects.
 
+## Installation with [CocoaPods](http://cocoapods.org/)
+
+```ruby
+pod "JTTree", :git => "https://github.com/jtbandes/JTTree.git"
+```
+
 ## Documentation
 
 See [`JTTree.h`](src/JTTree.h) for API. To quote the overview:
