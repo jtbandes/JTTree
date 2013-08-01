@@ -174,7 +174,15 @@ NS_INLINE JTTree *JTTreeWithCFTreeOrJTTree(CFTreeRef tree, JTTree *passthrough)
 
 - (NSIndexPath *)indexPath
 {
-    NSIndexPath *indexPath = [NSIndexPath new];
+    NSUInteger pathLength = 0;
+    
+    // Store a reverse linked list allowing us to build up the index path in linear time.
+    typedef struct _indexList {
+        NSUInteger index;
+        struct _indexList *prev;
+    } indexList;
+    
+    indexList *node = NULL;
     
     CFTreeRef current = _tree;
     while (current != nil)
@@ -185,11 +193,28 @@ NS_INLINE JTTree *JTTreeWithCFTreeOrJTTree(CFTreeRef tree, JTTree *passthrough)
         
         if (!parent) break;
         
-        indexPath = [indexPath indexPathByAddingIndex:indexInParent];
+        indexList *newNode = malloc(sizeof(indexList));
+        newNode->index = indexInParent;
+        newNode->prev = node;
+        node = newNode;
+        pathLength++;
         
         current = parent;
     }
     
+    // Convert the linked list into a contiguous array.
+    NSUInteger *indices = malloc(pathLength * sizeof(NSUInteger));
+    for (NSUInteger i = 0; i < pathLength; i++) {
+        indices[i] = node->index;
+        
+        indexList *oldNode = node;
+        node = oldNode->prev;
+        free(oldNode);
+    }
+    
+    NSIndexPath *indexPath = [NSIndexPath indexPathWithIndexes:indices length:pathLength];
+    
+    free(indices);
     return indexPath;
 }
 
