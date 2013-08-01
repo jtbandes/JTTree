@@ -54,11 +54,12 @@ CF_INLINE id JT_CFTreeGetContextObject(CFTreeRef tree)
     return (__bridge id)context.info;
 }
 
-CF_INLINE CFIndex JT_CFTreeGetIndexInParent(CFTreeRef tree)
+CF_INLINE CFIndex JT_CFTreeGetIndexInParent(CFTreeRef tree, CFTreeRef *outParent)
 {
     if (!tree) return kCFNotFound;
     
     CFTreeRef parent = CFTreeGetParent(tree);
+    if (outParent) *outParent = parent;
     
     if (!parent) return kCFNotFound;
     
@@ -178,11 +179,13 @@ NS_INLINE JTTree *JTTreeWithCFTreeOrJTTree(CFTreeRef tree, JTTree *passthrough)
     CFTreeRef current = _tree;
     while (current != nil)
     {
-        CFTreeRef parent = CFTreeGetParent(current);
+        CFTreeRef parent = NULL;
+        
+        NSUInteger indexInParent = JT_CFTreeGetIndexInParent(current, &parent);
         
         if (!parent) break;
         
-        indexPath = [indexPath indexPathByAddingIndex:JT_CFTreeGetIndexInParent(current)];
+        indexPath = [indexPath indexPathByAddingIndex:indexInParent];
         
         current = parent;
     }
@@ -222,11 +225,23 @@ NS_INLINE JTTree *JTTreeWithCFTreeOrJTTree(CFTreeRef tree, JTTree *passthrough)
 
 - (JTTree *)previousSibling
 {
-    return JTTreeWithCFTreeOrJTTree(CFTreeGetChildAtIndex(CFTreeGetParent(_tree), JT_CFTreeGetIndexInParent(_tree)-1), nil);
+    CFTreeRef parent = NULL;
+    
+    NSUInteger indexInParent = JT_CFTreeGetIndexInParent(_tree, &parent);
+    
+    if (!parent) return nil;
+    
+    return JTTreeWithCFTreeOrJTTree(CFTreeGetChildAtIndex(CFTreeGetParent(_tree), (CFIndex)indexInParent-1), nil);
 }
 - (id)previousSiblingObject
 {
-    return JT_CFTreeGetContextObject(CFTreeGetChildAtIndex(CFTreeGetParent(_tree), JT_CFTreeGetIndexInParent(_tree)-1));
+    CFTreeRef parent = NULL;
+    
+    NSUInteger indexInParent = JT_CFTreeGetIndexInParent(_tree, &parent);
+    
+    if (!parent) return nil;
+    
+    return JT_CFTreeGetContextObject(CFTreeGetChildAtIndex(CFTreeGetParent(_tree), (CFIndex)indexInParent-1));
 }
 
 - (JTTree *)nextSibling
