@@ -64,6 +64,56 @@
     STAssertEqualObjects(indexPath, grandchild.indexPath, @"Grandchild index path should be 1 0");
 }
 
+- (void)testTraversal
+{
+//    *     A
+//    *    / \
+//    *   B   C
+//    *  / \
+//    * D   E
+    
+    JTTree *a = [JTTree treeWithObject:@"a"];
+    JTTree *b = [JTTree treeWithObject:@"b"];
+    JTTree *c = [JTTree treeWithObject:@"c"];
+    JTTree *d = [JTTree treeWithObject:@"d"];
+    JTTree *e = [JTTree treeWithObject:@"e"];
+    
+    [a insertChild:b atIndex:0];
+    [a insertChild:c atIndex:1];
+    [b insertChild:d atIndex:0];
+    [b insertChild:e atIndex:1];
+    
+    NSMutableArray *results = [NSMutableArray array];
+    id block = ^(JTTree *descendant, BOOL *stop) { [results addObject:descendant]; };
+    
+    STAssertThrows([a enumerateDescendantsWithOptions:JTTreeTraversalChildrenOnly|JTTreeTraversalBreadthFirst
+                                           usingBlock:block], @"Two traversal options should fail");
+    
+    [a enumerateDescendantsWithOptions:JTTreeTraversalChildrenOnly usingBlock:block];
+    STAssertEqualObjects(results, (@[ b, c ]), @"Children-only traversal should visit B C");
+    [results removeAllObjects];
+    
+    [a enumerateDescendantsWithOptions:JTTreeTraversalBreadthFirst usingBlock:block];
+    STAssertEqualObjects(results, (@[ a, b, c, d, e ]), @"Breadth-first traversal should visit A B C D E");
+    [results removeAllObjects];
+    
+    [a enumerateDescendantsWithOptions:JTTreeTraversalDepthFirstPreOrder usingBlock:block];
+    STAssertEqualObjects(results, (@[ a, b, d, e, c ]), @"Depth-first pre-order traversal should visit A B D E C");
+    [results removeAllObjects];
+
+    [a enumerateDescendantsWithOptions:JTTreeTraversalDepthFirstPostOrder usingBlock:block];
+    STAssertEqualObjects(results, (@[ d, e, b, c, a ]), @"Depth-first post-order traversal should visit D E B C A");
+    [results removeAllObjects];
+    
+    [a enumerateDescendantsWithOptions:JTTreeTraversalBinaryInOrder usingBlock:block];
+    STAssertEqualObjects(results, (@[ d, b, e, a, c ]), @"In-order traversal should visit D B E A C");
+    [results removeAllObjects];
+
+    [a insertChildObject:nil atIndex:2];
+    STAssertThrows([a enumerateDescendantsWithOptions:JTTreeTraversalBinaryInOrder usingBlock:block],
+                   @"Binary traversal should fail for non-binary tree");
+}
+
 - (void)testObjectLifetime
 {
     JTTree *tree = [JTTree new];

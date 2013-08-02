@@ -9,6 +9,41 @@
 
 
 /**
+ * Options for tree traversal.
+ *
+ * Traversing the following example tree starting from node A
+ * produces the following forward traversal orders:
+ *
+ *   Children only:          B C
+ *   Breadth-first:          A B C D E
+ *   In-order (binary only): D B E A C
+ *   Depth-first pre-order:  A B D E C
+ *   Depth-first post-order: D E B C A
+ *
+ *     A
+ *    / \
+ *   B   C
+ *  / \
+ * D   E
+ *
+ */
+typedef NS_ENUM(NSUInteger, JTTreeTraversalOptions) {
+    // Forward or reverse traversal
+    JTTreeTraversalReverse             = 1 << 0,
+    // Traversal order options (mutually exclusive)
+    JTTreeTraversalChildrenOnly        = 1 << 1,
+    JTTreeTraversalBreadthFirst        = 1 << 2,
+    JTTreeTraversalDepthFirstPreOrder  = 1 << 3,
+    JTTreeTraversalDepthFirstPostOrder = 1 << 4,
+    JTTreeTraversalBinaryInOrder       = 1 << 5,
+    JTTreeTraversalOrderMask = (JTTreeTraversalChildrenOnly
+                                | JTTreeTraversalBreadthFirst
+                                | JTTreeTraversalDepthFirstPreOrder
+                                | JTTreeTraversalDepthFirstPostOrder
+                                | JTTreeTraversalBinaryInOrder),
+};
+
+/**
  * A more useful wrapper around CFTree (with apologies to NSTreeNode).
  *
  * Each tree node can store a reference to an object.
@@ -24,6 +59,17 @@
 
 /** An object stored at the tree node. */
 @property (strong) id object;
+
+/**
+ * Returns a new tree node storing the given object.
+ * @param object The object to store at the tree node.
+ */
++ (instancetype)treeWithObject:(id)object;
+/**
+ * Initializes a new tree node storing the given object.
+ * @param object The object to store at the tree node.
+ */
+- (instancetype)initWithObject:(id)object;
 
 
 #pragma mark Structure
@@ -105,6 +151,15 @@
  * @param indexPath An index path specifying a descendant.
  */
 - (id)descendantObjectAtIndexPath:(NSIndexPath *)indexPath;
+
+/**
+ * Traverses the tree in the specified manner and executes the block for each descendant.
+ * @note Mutating the tree during traversal will result in undefined behavior.
+ * @param options A bitmask that specifies options for traversal.
+ * @param block The block to apply to each descendant.
+ */
+- (void)enumerateDescendantsWithOptions:(JTTreeTraversalOptions)options
+                             usingBlock:(void (^)(JTTree *descendant, BOOL *stop))block;
 
 
 #pragma mark Manipulation

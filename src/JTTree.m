@@ -6,6 +6,7 @@
 //
 
 #import "JTTree.h"
+#import <objc/runtime.h>
 
 
 CF_INLINE CFTreeRef JT_CFTreeGetDescendantAtIndexPath(CFTreeRef tree, NSIndexPath *indexPath)
@@ -100,15 +101,6 @@ NS_INLINE JTTree *JTTreeWithCFTreeOrJTTree(CFTreeRef tree, JTTree *passthrough)
     return [[JTTree alloc] _initWithCFTree:tree];
 }
 
-- (id)init
-{
-    if ((self = [super init]))
-    {
-        _tree = JT_CFTreeCreateWithContextObject(nil);
-    }
-    return self;
-}
-
 - (id)_initWithCFTree:(CFTreeRef)cfTree
 {
     if ((self = [super init]))
@@ -116,6 +108,24 @@ NS_INLINE JTTree *JTTreeWithCFTreeOrJTTree(CFTreeRef tree, JTTree *passthrough)
         _tree = (CFTreeRef)CFRetain(cfTree);
     }
     return self;
+}
+
++ (instancetype)treeWithObject:(id)object
+{
+    return [[self alloc] initWithObject:object];
+}
+- (instancetype)initWithObject:(id)object
+{
+    if ((self = [super init]))
+    {
+        _tree = JT_CFTreeCreateWithContextObject(object);
+    }
+    return self;
+}
+
+- (id)init
+{
+    return [self initWithObject:nil];
 }
 
 - (void)dealloc
@@ -291,6 +301,119 @@ NS_INLINE JTTree *JTTreeWithCFTreeOrJTTree(CFTreeRef tree, JTTree *passthrough)
 - (id)descendantObjectAtIndexPath:(NSIndexPath *)indexPath
 {
     return JT_CFTreeGetContextObject(JT_CFTreeGetDescendantAtIndexPath(_tree, indexPath));
+}
+
+- (void)enumerateDescendantsWithOptions:(JTTreeTraversalOptions)options
+                             usingBlock:(void (^)(JTTree *, BOOL *))block
+{
+    NSAssert(__builtin_popcount(options & JTTreeTraversalOrderMask) == 1, @"Must specify exactly 1 traversal order");
+
+    NSMutableArray *descendants = [NSMutableArray array];
+    
+    // Most traversals are queue-based.
+    NSMutableArray *nodes = [NSMutableArray arrayWithObject:self];
+    
+    // Children-only traversal is easy, as CFTree gives us an API for it.
+    if (options & JTTreeTraversalChildrenOnly)
+    {
+        for (CFTreeRef current = CFTreeGetFirstChild(_tree); current; current = CFTreeGetNextSibling(current))
+            [descendants addObject:[[JTTree alloc] _initWithCFTree:current]];
+    }
+    else if (options & JTTreeTraversalBreadthFirst)
+    {
+        while ([nodes count] > 0)
+        {
+            JTTree *parent = [nodes objectAtIndex:0];
+            [nodes removeObjectAtIndex:0];
+            
+            [descendants addObject:parent];
+            
+            for (CFTreeRef child = CFTreeGetFirstChild(parent->_tree); child; child = CFTreeGetNextSibling(child))
+                [nodes addObject:[[JTTree alloc] _initWithCFTree:child]];
+        }
+    }
+    else if (options & JTTreeTraversalDepthFirstPreOrder)
+    {
+        while ([nodes count] > 0)
+        {
+            JTTree *parent = [nodes objectAtIndex:0];
+            [nodes removeObjectAtIndex:0];
+            
+            // Visit a node as soon as it is reached, then.
+            [descendants addObject:parent];
+            
+            NSMutableArray *children = [NSMutableArray array];
+            
+            for (CFTreeRef child = CFTreeGetFirstChild(parent->_tree); child; child = CFTreeGetNextSibling(child))
+                [children addObject:[[JTTree alloc] _initWithCFTree:child]];
+            
+            nodes = [[children arrayByAddingObjectsFromArray:nodes] mutableCopy];
+        }
+    }
+    else if (options & JTTreeTraversalDepthFirstPostOrder)
+    {
+        NSObject *visitedKey = [NSObject new];
+        while ([nodes count] > 0)
+        {
+            JTTree *parent = [nodes objectAtIndex:0];
+            
+            // Visit a node only after all its descendants have been visited.
+            if (objc_getAssociatedObject(parent, (__bridge void *)visitedKey))
+            {
+                objc_setAssociatedObject(parent, (__bridge void *)visitedKey, nil, OBJC_ASSOCIATION_RETAIN);
+                
+                [nodes removeObjectAtIndex:0];
+                [descendants addObject:parent];
+            }
+            else
+            {
+                objc_setAssociatedObject(parent, (__bridge void *)visitedKey, @YES, OBJC_ASSOCIATION_RETAIN);
+                
+                NSMutableArray *children = [NSMutableArray array];
+                
+                for (CFTreeRef child = CFTreeGetFirstChild(parent->_tree); child; child = CFTreeGetNextSibling(child))
+                    [children addObject:[[JTTree alloc] _initWithCFTree:child]];
+                
+                nodes = [[children arrayByAddingObjectsFromArray:nodes] mutableCopy];
+            }
+        }
+    }
+    else if (options & JTTreeTraversalBinaryInOrder)
+    {
+        NSObject *visitedKey = [NSObject new];
+        while ([nodes count] > 0)
+        {
+            JTTree *parent = [nodes objectAtIndex:0];
+            
+            JTTree *left = [parent childAtIndex:0];
+            JTTree *right = [left nextSibling];
+            NSAssert([right nextSibling] == nil, @"Binary traversal reached a node with more than 2 children");
+            
+            // Visit a node and its right subtree only after its left subtree has been visited already.
+            if (objc_getAssociatedObject(parent, (__bridge void *)visitedKey))
+            {
+                objc_setAssociatedObject(parent, (__bridge void *)visitedKey, nil, OBJC_ASSOCIATION_RETAIN);
+                
+                [nodes removeObjectAtIndex:0];
+                [descendants addObject:parent];
+                
+                if (right) [nodes insertObject:right atIndex:0];
+            }
+            else
+            {
+                objc_setAssociatedObject(parent, (__bridge void *)visitedKey, @YES, OBJC_ASSOCIATION_RETAIN);
+                
+                if (left) [nodes insertObject:left atIndex:0];
+            }
+        }
+    }
+    
+    BOOL stop = NO;
+    for (JTTree *descendant in (options & JTTreeTraversalReverse ? [descendants reverseObjectEnumerator] : descendants))
+    {
+        if (stop) break;
+        block(descendant, &stop);
+    }
 }
 
 
