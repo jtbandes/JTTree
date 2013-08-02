@@ -123,6 +123,12 @@ NS_INLINE JTTree *JTTreeWithCFTreeOrJTTree(CFTreeRef tree, JTTree *passthrough)
     CFRelease(_tree);
 }
 
+- (NSString *)description
+{
+    return [NSString stringWithFormat:@"<%@: %p>{children = %ld, object = %@}",
+            [self class], self, CFTreeGetChildCount(_tree), JT_CFTreeGetContextObject(_tree)];
+}
+
 - (BOOL)isEqual:(JTTree *)object
 {
     return object && CFEqual(_tree, object->_tree);
