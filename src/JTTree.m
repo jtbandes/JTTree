@@ -148,11 +148,11 @@ NS_INLINE JTTree *JTTreeWithCFTreeOrJTTree(CFTreeRef tree, JTTree *passthrough)
     return CFHash(_tree);
 }
 
-- (id)representedObject
+- (id)object
 {
     return JT_CFTreeGetContextObject(_tree);
 }
-- (void)setRepresentedObject:(id)obj
+- (void)setObject:(id)obj
 {
     JT_CFTreeSetContextObject(_tree, obj);
 }
