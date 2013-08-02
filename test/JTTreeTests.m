@@ -24,6 +24,7 @@
     STAssertTrue([tree isLeaf], @"New tree should be a leaf");
     STAssertTrue([tree isEqual:tree.root], @"New tree should be its own root");
     STAssertEquals(tree.numberOfChildren, (NSUInteger)0, @"New tree should have no children");
+    STAssertEquals(tree.depth, (NSUInteger)0, @"New tree should have depth 0");
     
     [tree insertChildObject:nil atIndex:0];
     
@@ -33,6 +34,7 @@
     
     STAssertNotNil(child1, @"New child should not be nil");
     STAssertEqualObjects([NSIndexPath indexPathWithIndex:0], child1.indexPath, @"Child index path should be 0");
+    STAssertEquals(child1.depth, (NSUInteger)1, @"Child depth should be 1");
     STAssertTrue([child1 isLeaf], @"New child should be a leaf");
     STAssertEqualObjects(tree, child1.parent, @"New child's parent should be original tree");
     STAssertEqualObjects(tree, child1.root, @"New child's root should be original tree");
@@ -62,6 +64,13 @@
     NSIndexPath *indexPath = [NSIndexPath indexPathWithIndexes:((NSUInteger[]){1,0}) length:2];
     STAssertEqualObjects(grandchild, [tree descendantAtIndexPath:indexPath], @"Grandchild should be reachable by index path 1 0");
     STAssertEqualObjects(indexPath, grandchild.indexPath, @"Grandchild index path should be 1 0");
+    STAssertEquals(grandchild.depth, (NSUInteger)2, @"Grandchild depth should be 2");
+    
+    JTTree *intermediate = [JTTree treeWithObject:nil];
+    [child1 insertChild:intermediate atIndex:0];
+    [grandchild removeFromParent];
+    [intermediate insertChild:grandchild atIndex:0];
+    STAssertEquals(grandchild.depth, (NSUInteger)3, @"Descendant depth should be 3 after inserting a node above");
 }
 
 - (void)testTraversal

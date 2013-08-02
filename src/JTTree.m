@@ -188,6 +188,16 @@ NS_INLINE JTTree *JTTreeWithCFTreeOrJTTree(CFTreeRef tree, JTTree *passthrough)
     return JT_CFTreeGetContextObject(CFTreeGetChildAtIndex(_tree, index));
 }
 
+- (NSUInteger)depth
+{
+    NSUInteger depth = 0;
+    
+    for (CFTreeRef current = _tree ? CFTreeGetParent(_tree) : NULL; current; current = CFTreeGetParent(current))
+        depth++;
+    
+    return depth;
+}
+
 - (NSIndexPath *)indexPath
 {
     NSUInteger pathLength = 0;

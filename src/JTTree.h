@@ -78,6 +78,12 @@ typedef NS_ENUM(NSUInteger, JTTreeTraversalOptions) {
 - (BOOL)isLeaf;
 
 /**
+ * Calculates the depth of the node relative to its root parent by traversing upwards through the tree.
+ * @return The depth of the node in the tree.
+ */
+- (NSUInteger)depth;
+
+/**
  * Calculates the index path of the node relative to its root parent by traversing upwards through the tree.
  * @return The index path of the node in the tree.
  * @performance This operation is somewhat expensive due to the limitations of the CFTree API.
