@@ -7,7 +7,7 @@ Born out of a desire to not work with CFTree objects.
 ## Installation with [CocoaPods](http://cocoapods.org/)
 
 ```ruby
-pod "JTTree", :git => "https://github.com/jtbandes/JTTree.git"
+pod "JTTree"
 ```
 
 ## Documentation
