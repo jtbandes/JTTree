@@ -130,6 +130,7 @@ NS_INLINE JTTree *JTTreeWithCFTreeOrJTTree(CFTreeRef tree, JTTree *passthrough)
 
 - (void)dealloc
 {
+    CFTreeRemoveAllChildren(_tree);
     CFRelease(_tree);
 }
 
